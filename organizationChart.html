@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Title</title>
+</head>
+<style>
+    @media screen and(-ms-high-contrast:active),(-ms-high-contrast:none) {
+        .ie_display{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .ie_margin{
+            margin-left: -10px!important;
+        }
+    }
+</style>
+<body style="overflow-y: scroll;">
+<div id="depart" style="display: flex;justify-content: center;padding: 30px"></div>
+</body>
+<script src="jquery.min.js"></script>
+<script>
+    var isCompany = false;
+    //配置公司背景色，部门背景色，用户所在部门背景色
+    var comBackground = 'linear-gradient(#2196f3,#4c6cca)';
+    var depBackground = 'linear-gradient(#673ab7,#4c6cca)';
+    var userBackground = 'linear-gradient(#4CAF50,#4c6cca)';
+    var userDepName = '技术部';
+    var userDepId = '7';
+    var isHasTopCom = false;//是否需要另设顶层公司
+    var topCompany = 'XXX集团有限公司';//顶层公司名称
+    var depArr = [
+        {departmentname: 'CEO', subcompanyid1: '2', supdepid: '0', id: '1'},
+        {departmentname: '销售与市场', subcompanyid1: '3', supdepid: '1', id: '2'},
+        {departmentname: '生产', subcompanyid1: '2', supdepid: '1', id: '3'},
+        {departmentname: '人力资源部', subcompanyid1: '2', supdepid: '2', id: '4'},
+        {departmentname: '物流&客服部', subcompanyid1: '3', supdepid: '3', id: '5'},
+        {departmentname: '计划&采购部', subcompanyid1: '3', supdepid: '3', id: '6'},
+        {departmentname: '技术部', subcompanyid1: '2', supdepid: '4', id: '7'},
+        {departmentname: '采购部', subcompanyid1: '2', supdepid: '5', id: '8'},
+        {departmentname: '销售部', subcompanyid1: '2', supdepid: '6', id: '9'},
+    ];
+    var comArr = [
+        {subcompanyname: 'XXX有限公司', supsubcomid: '0', id: '1'},
+        {subcompanyname: 'XXX有限公司华中分公司', supsubcomid: '1', id: '2'},
+        {subcompanyname: 'XXX有限公司华南分公司', supsubcomid: '1', id: '3'},
+    ];
+    function findDep(depArr, str, arrNew) {
+        var arr = arrNew || [];
+        depArr.map(function(item, index){
+            if (item.departmentname == str) {
+                depArr.map(function(item1, index){
+                    if (item1.id == item.supdepid) {
+                        arr.push(item1);
+                        if (item.supdepid == '0') {
+                            return;
+                        }
+                        findDep(depArr, item1.departmentname, arr);
+                    }
+                })
+            }
+        })
+        return arr;
+    }
+    var newComArr = [];
+    if(isHasTopCom){
+        newComArr.push({
+            departmentname: topCompany,
+            supdepid: '0',
+            id: '8888',
+        });
+    }
+    comArr.map(function(item, index){
+        if(isHasTopCom){
+            if (item.supsubcomid === '0') {
+                item.supsubcomid = '8888';
+            };
+        }
+        newComArr.push({
+            departmentname: item.subcompanyname,
+            supdepid: item.supsubcomid,
+            id: item.id,
+        });
+    });
+    //2、将接口返回的数据拼接成所需要的格式
+    function bibao(obj, s, m, str) {
+        var x1 = m || [];
+        for (var i = 0; i < obj.length; i++) {
+            if (obj[i].supdepid == s) {
+                x1.push(obj[i]);
+                x1.map(function (item, index) {
+                    if (item.subcompanyid1 && isCompany) {
+
+                    } else {
+                        x1[index].child = [];
+                    }
+                    if (str) {
+                        isCompany = true;
+                        for (var i = 0; i < str.length; i++) {
+                            if (item.id == str[i].subcompanyid1 && !item.subcompanyid1) {
+                                x1[index].child.push(str[i]);
+                            }
+                        }
+                    }
+                    return bibao(obj, item.id, x1[index].child, str);
+                })
+            }
+        }
+        return x1;
+    };
+    var arr = bibao(depArr, '0');
+    var gData = bibao(newComArr,'0', [], arr);
+
+    //3、界面和样式的处理
+    function generate(obj, num, cb) {
+        if (obj && obj[0]) {
+            obj.map(function (item, index) {
+                var html = '';
+                var str = item.departmentname;
+                if (item.departmentname.indexOf(" ") > -1) {
+                    item.departmentname = item.departmentname.replace(/\s*/g, "");
+                }
+                var str1 = '';
+                if (item.departmentname.indexOf('-') > -1) {
+                    str1 = item.departmentname.replace(/-/g, '')
+                }else if (item.departmentname.indexOf('&') > -1) {
+                    str1 = item.departmentname.replace(/&/g, '')
+                }else if (item.departmentname.indexOf('—') > -1) {
+                    str1 = item.departmentname.replace(/—/g, '')
+                } else if (item.departmentname.indexOf('.') > -1) {
+                    str1 = item.departmentname.replace(/./g, '')
+                } else if (item.departmentname.indexOf('（') > -1) {
+                    str1 = item.departmentname.replace(/（/g, '')
+                } else if (item.departmentname.indexOf('）') > -1) {
+                    str1 = item.departmentname.replace(/）/g, '')
+                } else if (item.departmentname.indexOf('（') > -1 && item.departmentname.indexOf('）') > -1) {
+                    str1 = item.departmentname.replace(/（/g, '').replace(/）/g, '');
+                } else if (item.departmentname.indexOf('(') > -1 && item.departmentname.indexOf(')') > -1) {
+                    str1 = item.departmentname.replace('(', '').replace(')', '');
+                } else if (item.departmentname.indexOf('-') > -1 && item.departmentname.indexOf('(') > -1 && item.departmentname.indexOf(')') > -1) {
+                    str1 = item.departmentname.replace(/-/g, '').replace('(', '').replace(')', '');
+                } else if (item.departmentname.indexOf('-') > -1 && item.departmentname.indexOf('（') > -1 && item.departmentname.indexOf('）') > -1) {
+                    str1 = item.departmentname.replace(/-/g, '').replace(/（/g, '').replace(/）/g, '');
+                } else {
+                    str1 = item.departmentname;
+                }
+                var idStr = str1 + item.id;
+                var idStrSpan = item.departmentname + item.id + 'span';
+                var child = item.child;
+                var spanBar = num != 1 ? "<div style='background: #4c6cca;display: block;width: 3px;height: 20px;margin: auto;'></div>" : "<span></span>";
+                var background = item.subcompanyid1 ? depBackground : comBackground;
+                if (item.departmentname == userDepName && item.id== userDepId) {
+                    background = userBackground;
+                }
+                var span = child && child.length > 0 ? "<div id=" + idStrSpan + " style='color:#fff;cursor:pointer;font-size: 25px;margin-top: -10px'  onclick='display(" + JSON.stringify(item) + ",$(this)," + index + ")'>+</div>" : "<span></span>";
+                html += "<div class='ie_display' style='text-align: center;font-size:14px;color:#fff;width: 200px'><div style='display:flex;align-items: center'><div>" + spanBar + "<div style='background: " + background + ";box-shadow:5px 5px 5px #6A48D7;width: 150px;margin: auto;text-align: center;border-radius: 5px;display: flex;align-items:center;justify-content:space-between;height: 60px'><div style='width: 20px'></div><div>" + str + "</div><div style='display: flex;flex-direction: column;height: 100%;justify-content: space-between'>" + span + "<div style='align-self: flex-end;width: 20px;border-radius: 50%;background: #fff;color: #4c6cca'>" + child.length + "</div></div></div></div></div><div id=" + "'" + idStr + "'" + " style='display: flex;justify-content: center;'></div></div>";
+                if (cb) {
+                    cb(html)
+                }
+            })
+        }
+    };
+    generate(gData, 1, function (html) {
+        $('#depart').append(html)
+    });
+
+    //4、点击触发generate方法挂载界面
+    function display(item, that, index) {
+        var str1 = '';
+        if (item.departmentname.indexOf('-') > -1) {
+            str1 = item.departmentname.replace(/-/g, '')
+        } else if (item.departmentname.indexOf('&') > -1) {
+            str1 = item.departmentname.replace(/&/g, '')
+        }else if (item.departmentname.indexOf('—') > -1) {
+            str1 = item.departmentname.replace(/—/g, '')
+        } else if (item.departmentname.indexOf('.') > -1) {
+            str1 = item.departmentname.replace(/./g, '')
+        } else if (item.departmentname.indexOf('（') > -1) {
+            str1 = item.departmentname.replace(/（/g, '')
+        } else if (item.departmentname.indexOf('）') > -1) {
+            str1 = item.departmentname.replace(/）/g, '')
+        } else if (item.departmentname.indexOf('（') > -1 && item.departmentname.indexOf('）') > -1) {
+            str1 = item.departmentname.replace(/（/g, '').replace(/）/g, '');
+        } else if (item.departmentname.indexOf('(') > -1 && item.departmentname.indexOf(')') > -1) {
+            str1 = item.departmentname.replace('(', '').replace(')', '');
+        } else if (item.departmentname.indexOf('-') > -1 && item.departmentname.indexOf('(') > -1 && item.departmentname.indexOf(')') > -1) {
+            str1 = item.departmentname.replace(/-/g, '').replace('(', '').replace(')', '');
+        } else if (item.departmentname.indexOf('-') > -1 && item.departmentname.indexOf('（') > -1 && item.departmentname.indexOf('）') > -1) {
+            str1 = item.departmentname.replace(/-/g, '').replace(/（/g, '').replace(/）/g, '');
+        } else {
+            str1 = item.departmentname;
+        }
+        var str = str1 + item.id;
+        var child = item.child;
+        var spanLeftImg = child[0].subcompanyid1 ? './leftDep.png' : './leftCom.png';
+        var spanRightImg = child[0].subcompanyid1 ? './rightDep.png' : './rightCom.png';
+        if(Number($('#depart')[0].style.left.replace('px',''))>0){
+
+        }else {
+            $('#depart').css({
+                'position': 'relative',
+                'left': "0px",
+                'transition-property': 'all',
+                'transition-duration': '1.5s'
+            });
+        }
+        if (child) {
+            if ($('#' + str).children('div').length > 0) {
+                that.html('+');
+                $('#' + str + '>div').remove();
+                if (child.length !== 1) {
+                    $('#' + str).prev().remove();
+                }
+            } else {
+                var firstChild = 0;
+                var divLeft = 0;
+                var lineWidth = 0;
+                that.html('-');
+                $('#' + str).before('<div style="width: 150px"><div style="background: #4c6cca;display: block;width: 3px;height: 20px;margin: auto;"></div><div style="height: 3px;background: #4c6cca;margin-left: -26px"></div></div>');
+                generate(child, '', function (html) {
+                    $('#' + str).append("<div style=''>" + html + "</div>");
+                    $('#' + str).css('margin-bottom', '20px');
+                    var childNum = $('#' + str).children('div').length;
+                    var maxNum = parseInt((window.innerWidth-5)/200);
+                    var siblings = ($('#' + str).parent().parent().siblings());
+                    var windowWidth = window.innerWidth;
+                    //右边越界
+                    if ($('#' + str) && $('#' + str).children('div:first-child')[0] && ($('#' + str).children('div:last-child')[0].offsetLeft > windowWidth - 200) && child.length < maxNum) {
+                        $('#depart').css({
+                            position: 'relative',
+                            'left': -($('#' + str).children('div:last-child')[0].offsetLeft + 200 - windowWidth) + 'px',
+                            'transition-property': 'all',
+                            'transition-duration': '1s'
+                        });
+                    }
+                    for (var i = 0; i < siblings.length; i++) {
+                        if ($(siblings[i])[0].childElementCount > 0 && $(siblings[i])[0].id!='span1'&& $(siblings[i])[0].id!='span2') {
+                            if ($(siblings[i]).children().children('div:last-child').children().length > 0) {
+                                if ($(siblings[i]).children().children('div:last-child').children().length > 1) {
+                                    $(siblings[i]).children().children('div:last-child').prev().remove();
+                                }
+                                $(siblings[i]).children().children('div:first-child').children('div:last-child').children('div:last-child').children('div:last-child').children('div:first-child').html('+');
+                                $(siblings[i]).children().children('div:last-child').children().remove();
+                            }
+                        }
+                    }
+                    if (200 * (childNum + 1) - 197 >= window.innerWidth) {
+                        if (isIE()) {
+                            console.log(isIE())
+                            $('#' + str).css({position: 'absolute', left: '-28px', right: 0});
+                        } else {
+                            $('#' + str).css({position: 'absolute', left: 0, right: 0});
+                        }
+                        $('#' + str).css({position: 'absolute', left: 0, right: 0});
+                        $('#' + str).children("div:nth-child(" + childNum + ")").css('display', 'none');
+                        if ($('#' + str).children("div:first-child")[0]&&$('#' + str).children("div:first-child")[0].id != 'span1') {
+                            $('#' + str).children("div:first-child").before('<div id="span1" class="ie_positon_span1" style="margin-top: 23px;cursor: pointer" onclick="leftDir(' + str + ')"><img src=' + spanLeftImg + ' alt="" style="width:40px;height: 50px"/></div>');
+                        }
+                        $('#' + str).children('#span1').css('visibility', 'hidden');
+                        if ($('#' + str).children('#span2').length == 0) {
+                            $('#' + str).children("div:nth-child(" + Number(maxNum + 1) + ")").after('<div id="span2" class="ie_margin" style="margin-top: 23px;cursor: pointer;margin-left: -40px" onclick="rightDir(' + str + ')"><img src=' + spanRightImg + ' alt="" style="width:40px;height: 50px"/></div>');
+                        }
+                        divLeft = $('#' + str).children("div:nth-child(2)").children("div:first-child").children("div:first-child").children("div:first-child").children("div:first-child")[0].offsetLeft+1.5;
+                        lineWidth = 200 * (maxNum - 1);
+                        firstChild = $('#' + str).children('#span1')&&$('#' + str).children('#span1')[0].offsetLeft;
+                    } else {
+                        divLeft = $('#' + str).children("div:first-child").children("div:first-child").children("div:first-child").children("div:first-child").children("div:first-child")[0].offsetLeft;
+                        lineWidth = 200 * (childNum - 1) + 3 ;
+                        firstChild = $('#' + str).children("div:first-child")[0].offsetLeft;
+                    }
+                    //左边越界
+                    if (firstChild+Number($('#depart')[0].offsetLeft)<=0) {
+                        $('#depart').css({
+                            'position': 'relative',
+                            'left': -firstChild + 'px',
+                            'transition-property': 'all',
+                            'transition-duration': '1s'
+                        });
+                    }
+                    $('#' + str).prev().children("div:last-child").css({
+                        'width': lineWidth + 'px',
+                        'margin-left': '0px',
+                        'position': 'absolute',
+                        'left': divLeft+ 'px',
+                    });
+                    if (child.length == 1) {
+                        $('#' + str).prev().remove();
+                    }
+                });
+            }
+        }
+    }
+
+    //5、创建用户所属的部门到公司的链条并调用；
+    var count = 0;
+    function findDep(depArr, str, id, arrNew) {
+        var arr = arrNew || [{child: []}];
+        count++;
+        for (var n = 0; n < depArr.length; n++) {
+            var item = depArr[n];
+            if (item.departmentname == str && item.id == id) {
+                for (var m = 0; m < depArr.length; m++) {
+                    var item1 = depArr[m];
+                    if (item1.id == item.supdepid) {
+                        var itemStr = item1.child;
+                        for (var i = 0; i < itemStr.length; i++) {
+                            if (item.departmentname == itemStr[i].departmentname) {
+                                if (count % 2 == 0) {
+                                    arr[0].name = item1.departmentname;
+                                    arr[0].no = i;
+                                }
+                                if (count % 2 != 0) {
+                                    arr[0].child.push({name: item1.departmentname, no: i});
+                                }
+                            }
+                        }
+                        var arrNew = arr;
+                        if (arr[0].name != undefined && arr[0].child.length > 0) {
+                            arrNew = [{child: arr}];
+                            count--;
+                        }
+                        if (item1.supdepid == '0' && item1.subcompanyid1 == undefined) {
+                            return arr;
+                        } else if (item1.supdepid == '0') {
+                            for (var i = 0; i < newComArr.length; i++) {
+                                if (newComArr[i].id == item1.subcompanyid1) {
+                                    var itemStr1 = newComArr[i].child;
+                                    for (var j = 0; j < itemStr1.length; j++) {
+                                        if (item1.departmentname == itemStr1[j].departmentname) {
+                                            arrNew[0].name = newComArr[i].departmentname;
+                                            arrNew[0].no = j;
+                                            return findDep(newComArr, newComArr[i].departmentname, newComArr[i].id, [{child: arrNew}]);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            return findDep(depArr, item1.departmentname, item1.id, arrNew);
+                        }
+                        break;
+                    }else if(item.supdepid == '0'){
+                        var arrNew = arr;
+                        if (arr[0].name != undefined && arr[0].child.length > 0) {
+                            arrNew = [{child: arr}];
+                            count--;
+                        }
+                        for (var i = 0; i < newComArr.length; i++) {
+                            if (newComArr[i].id == item.subcompanyid1) {
+                                var itemStr1 = newComArr[i].child;
+                                for (var j = 0; j < itemStr1.length; j++) {
+                                    if (item.departmentname == itemStr1[j].departmentname) {
+                                        arrNew[0].name = newComArr[i].departmentname;
+                                        arrNew[0].no = j;
+                                        return findDep(newComArr, newComArr[i].departmentname, newComArr[i].id, [{child: arrNew}]);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
+    var depChain = findDep(depArr, userDepName, userDepId);
+    function displayDep(obj, objN, index) {
+        var objM = obj[index];
+        var idStrSpan = objM.departmentname + objM.id + 'span';
+        display(objM, $('#' + idStrSpan));
+        if (objN && objN.length > 0) {
+            if (objM.departmentname == objN[0].name) {
+                if (objN[0].child && objN[0].child.length > 0) {
+                    displayDep(objM.child, objN[0].child, objN[0].no);
+                }
+            }
+        }
+    }
+    ;
+    displayDep(gData, depChain, 0);
+
+    //4.1、点击右边箭头
+    function rightDir(str) {
+        if ($(str).children('#span1')[0].style.visibility == 'hidden') {
+            $(str).children('#span1').css('visibility', 'visible');
+        }
+        $(str).children('#span1').next().css('display', 'none');
+        $(str).children('#span1').insertAfter($(str).children('#span1').next());
+        $(str).children('#span2').next().css('display', 'block');
+        $(str).children('#span2').insertAfter($(str).children('#span2').next());
+        if ($(str).children('#span2').next().length == 0) {
+            $(str).children('#span2').css('visibility', 'hidden');
+        }
+        removeChild(str);
+    }
+
+    //4.2、点击左边箭头
+    function leftDir(str) {
+        if ($(str).children('#span2')[0].style.visibility == 'hidden') {
+            $(str).children('#span2').css('visibility', 'visible');
+        }
+        $(str).children('#span1').prev().css('display', 'block');
+        $(str).children('#span1').insertBefore($(str).children('#span1').prev());
+        $(str).children('#span2').prev().css('display', 'none');
+        $(str).children('#span2').insertBefore($(str).children('#span2').prev());
+        if ($(str).children('#span1').prev().length == 0) {
+            $(str).children('#span1').css('visibility', 'hidden');
+        }
+        removeChild(str);
+    }
+    //公共方法-点击箭头之后删掉下面的所属机构
+    function removeChild(father) {
+        $('#depart').css({
+            position: 'relative',
+            'left': "0px",
+            'transition-property': 'all',
+            'transition-duration': '1.5s'
+        });
+        var siblings = $(father).children();
+        for (var i = 0; i < siblings.length; i++) {
+            if ($(siblings[i])[0].childElementCount > 0) {
+                if ($(siblings[i]).children().children('div:last-child').children().length > 0) {
+                    if ($(siblings[i]).children().children('div:last-child').children().length > 1) {
+                        $(siblings[i]).children().children('div:last-child').prev().remove();
+                    }
+                    $(siblings[i]).children().children('div:last-child').children().remove();
+                    $(siblings[i]).children().children('div:first-child').children('div:last-child').children('div:last-child').children('div:last-child').children('div:first-child').html('+');
+                }
+            }
+        }
+    }
+    //判断是否是ie浏览器
+    function isIE() {
+        if (!!window.ActiveXObject || "ActiveXObject" in window) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+</script>
+</html>
